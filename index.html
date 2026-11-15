@@ -1,0 +1,290 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Clip It! Clips</title>
+<meta name="robots" content="noindex, nofollow">
+<style>
+  :root {
+    --bg: #f6f6f4; --surface: #ffffff; --text: #16181d; --muted: #646a75;
+    --line: #e3e3df; --accent: #e8442e; --accent-ink: #ffffff; --chip: #efefeb;
+    --shadow: 0 1px 2px rgba(0,0,0,.06), 0 4px 14px rgba(0,0,0,.05);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0f1114; --surface: #181b20; --text: #eceef1; --muted: #9aa1ac;
+      --line: #2a2e35; --accent: #ff5a43; --accent-ink: #ffffff; --chip: #22262c;
+      --shadow: none;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0f1114; --surface: #181b20; --text: #eceef1; --muted: #9aa1ac;
+    --line: #2a2e35; --accent: #ff5a43; --accent-ink: #ffffff; --chip: #22262c;
+    --shadow: none;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  header {
+    position: sticky; top: 0; z-index: 5; background: var(--bg);
+    border-bottom: 1px solid var(--line);
+  }
+  .bar {
+    max-width: 1100px; margin: 0 auto; padding: 14px 16px;
+    display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
+  }
+  .brand { font-weight: 800; font-size: 20px; letter-spacing: -.02em; margin-right: auto; }
+  .brand span { color: var(--accent); }
+  select, button, .btn {
+    font: inherit; color: var(--text); background: var(--surface);
+    border: 1px solid var(--line); border-radius: 8px; padding: 7px 12px;
+    cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;
+  }
+  .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  main { max-width: 1100px; margin: 0 auto; padding: 8px 16px 64px; }
+  .notice {
+    background: var(--chip); border-radius: 10px; padding: 10px 14px; margin: 16px 0 0;
+    color: var(--muted); font-size: 14px;
+  }
+  h2 {
+    font-size: 14px; text-transform: uppercase; letter-spacing: .06em;
+    color: var(--muted); margin: 28px 0 12px;
+  }
+  .grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
+  .card {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
+    overflow: hidden; box-shadow: var(--shadow); cursor: pointer; text-align: left;
+    padding: 0; display: block; width: 100%;
+  }
+  .card:hover { border-color: var(--accent); }
+  .thumb { aspect-ratio: 16/9; background: #000; position: relative; }
+  .thumb video { width: 100%; height: 100%; object-fit: cover; display: block; pointer-events: none; }
+  .play {
+    position: absolute; inset: 0; display: grid; place-items: center;
+  }
+  .play i {
+    width: 44px; height: 44px; border-radius: 50%; background: rgba(0,0,0,.55);
+    display: grid; place-items: center;
+  }
+  .play i::after {
+    content: ""; border-left: 14px solid #fff; border-top: 9px solid transparent;
+    border-bottom: 9px solid transparent; margin-left: 4px;
+  }
+  .meta { padding: 10px 12px; display: flex; justify-content: space-between; gap: 8px; }
+  .time { font-weight: 650; }
+  .size { color: var(--muted); font-size: 13px; }
+  .gate { max-width: 360px; margin: 12vh auto; text-align: center; }
+  .gate h1 { font-size: 22px; margin: 0 0 6px; }
+  .gate p { color: var(--muted); margin: 0 0 18px; }
+  .gate form { display: flex; gap: 8px; }
+  .gate input {
+    flex: 1; min-width: 0; font: inherit; font-size: 18px; letter-spacing: .15em; text-transform: uppercase;
+    padding: 9px 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); color: var(--text);
+  }
+  .gate .err { color: var(--accent); min-height: 1.5em; margin-top: 10px; }
+  .empty { text-align: center; color: var(--muted); padding: 80px 0; }
+
+  dialog {
+    border: none; padding: 0; background: var(--surface); color: var(--text);
+    border-radius: 14px; width: min(960px, calc(100vw - 32px)); max-height: calc(100vh - 32px);
+  }
+  dialog::backdrop { background: rgba(0,0,0,.7); }
+  dialog video { width: 100%; display: block; background: #000; max-height: 70vh; }
+  .dlg-bar { padding: 12px 14px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .dlg-title { margin-right: auto; font-weight: 650; }
+</style>
+</head>
+<body>
+<header>
+  <div class="bar">
+    <div class="brand" id="brand">Clip <span>It!</span></div>
+    <select id="dayFilter" aria-label="Filter by day"><option value="">All days</option></select>
+    <button id="refresh" title="Check for new clips">Refresh</button>
+    <button id="logout" title="Forget the venue code">Log out</button>
+  </div>
+</header>
+
+<main>
+  <div id="notice" class="notice" hidden></div>
+  <div id="gate" class="gate" hidden>
+    <h1>Enter venue code</h1>
+    <p>Ask the venue staff for today's Clip It! code.</p>
+    <form id="gateForm">
+      <input id="codeInput" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-label="Venue code" required>
+      <button class="btn primary" type="submit">View clips</button>
+    </form>
+    <div class="err" id="gateErr"></div>
+  </div>
+  <div id="list"></div>
+</main>
+
+<dialog id="player">
+  <video id="video" controls playsinline></video>
+  <div class="dlg-bar">
+    <div class="dlg-title" id="dlgTitle"></div>
+    <button id="copyLink">Copy link</button>
+    <a class="btn primary" id="download" href="#">Download</a>
+    <button id="close">Close</button>
+  </div>
+</dialog>
+
+<script src="config.js"></script>
+<script>
+(() => {
+  const cfg = window.CLIPIT_CONFIG || {};
+  const $ = (id) => document.getElementById(id);
+  const store = {
+    get: (k) => { try { return localStorage.getItem(k); } catch { return null; } },
+    set: (k, v) => { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch {} },
+  };
+  let base = null;            // where the Pi is: "" = this same server
+  let code = store.get("clipit_code") || "";
+  let clips = [];
+  let lastSig = null;
+
+  const fmtDay = (iso) => new Date(iso).toLocaleDateString(undefined,
+    { weekday: "long", month: "long", day: "numeric", year: "numeric" });
+  const fmtTime = (iso) => new Date(iso).toLocaleTimeString(undefined,
+    { hour: "numeric", minute: "2-digit", second: "2-digit" });
+  const fmtSize = (b) => (b / 1e6).toFixed(0) + " MB";
+  const clipUrl = (c, dl) =>
+    `${base}/clips/${encodeURIComponent(c.name)}?k=${encodeURIComponent(code)}${dl ? "&dl=1" : ""}`;
+
+  function notice(msg) { $("notice").textContent = msg; $("notice").hidden = !msg; }
+
+  // Served by the Pi itself -> same origin. Served by GitHub Pages -> read the Pi's
+  // current tunnel address from tunnel.json (the Pi updates it when the tunnel restarts).
+  async function findServer() {
+    if (cfg.serverUrl) return cfg.serverUrl.replace(/\/+$/, "");
+    try {
+      const r = await fetch(`tunnel.json?t=${Date.now()}`, { cache: "no-store" });
+      if (r.ok) return ((await r.json()).url || "").replace(/\/+$/, "");
+    } catch {}
+    return "";
+  }
+
+  function showGate(err) {
+    $("gate").hidden = false;
+    $("list").innerHTML = "";
+    $("gateErr").textContent = err || "";
+    lastSig = null;
+    setTimeout(() => $("codeInput").focus(), 0);
+  }
+
+  async function load() {
+    if (base === null) base = await findServer();
+    if (!code) return showGate();
+    try {
+      const res = await fetch(`${base}/api/clips?k=${encodeURIComponent(code)}&t=${Date.now()}`, { cache: "no-store" });
+      if (res.status === 401) { code = ""; store.set("clipit_code", null); return showGate("That code didn't work."); }
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      clips = (await res.json()).clips || [];
+      notice("");
+      $("gate").hidden = true;
+    } catch (e) {
+      base = null;  // the Pi may have a new tunnel address; look it up again next time
+      notice("Can't reach the Clip It! camera right now. It may be offline or restarting — try again in a minute.");
+      return;
+    }
+    const sig = clips.map((c) => c.name).join("|");
+    if (sig !== lastSig) {   // only rebuild the grid when the clip list changed
+      lastSig = sig;
+      fillDays();
+      render();
+    }
+    openFromHash();
+  }
+
+  function fillDays() {
+    const sel = $("dayFilter"), keep = sel.value;
+    const days = [...new Set(clips.map((c) => c.recorded.slice(0, 10)))];
+    sel.innerHTML = '<option value="">All days</option>' +
+      days.map((d) => `<option value="${d}">${fmtDay(d + "T12:00:00")}</option>`).join("");
+    if (days.includes(keep)) sel.value = keep;
+  }
+
+  function render() {
+    const day = $("dayFilter").value;
+    const shown = clips.filter((c) => !day || c.recorded.startsWith(day));
+    const list = $("list");
+    list.innerHTML = "";
+    if (!shown.length) {
+      list.innerHTML = '<div class="empty">No clips yet.</div>';
+      return;
+    }
+    const groups = {};
+    for (const c of shown) (groups[c.recorded.slice(0, 10)] ||= []).push(c);
+    for (const [d, items] of Object.entries(groups)) {
+      const h = document.createElement("h2");
+      h.textContent = `${fmtDay(d + "T12:00:00")} · ${items.length} clip${items.length > 1 ? "s" : ""}`;
+      const grid = document.createElement("div");
+      grid.className = "grid";
+      for (const c of items) {
+        const card = document.createElement("button");
+        card.className = "card";
+        card.innerHTML = `
+          <div class="thumb">
+            <video muted preload="metadata" src="${clipUrl(c)}#t=1"></video>
+            <div class="play"><i></i></div>
+          </div>
+          <div class="meta"><span class="time">${fmtTime(c.recorded)}</span>
+            <span class="size">${fmtSize(c.size)}</span></div>`;
+        card.onclick = () => openClip(c);
+        grid.appendChild(card);
+      }
+      list.append(h, grid);
+    }
+  }
+
+  function openClip(c) {
+    $("video").src = clipUrl(c);
+    $("dlgTitle").textContent = `${fmtDay(c.recorded)}, ${fmtTime(c.recorded)}`;
+    $("download").href = clipUrl(c, true);
+    history.replaceState(null, "", "#clip=" + encodeURIComponent(c.name));
+    $("player").showModal();
+    $("video").play().catch(() => {});
+  }
+
+  function openFromHash() {
+    const m = location.hash.match(/^#clip=(.+)$/);
+    if (!m) return;
+    const c = clips.find((x) => x.name === decodeURIComponent(m[1]));
+    if (c && !$("player").open) openClip(c);
+  }
+
+  $("player").addEventListener("close", () => {
+    $("video").pause();
+    $("video").removeAttribute("src");
+    $("video").load();
+    history.replaceState(null, "", location.pathname + location.search);
+  });
+  $("close").onclick = () => $("player").close();
+  $("copyLink").onclick = async () => {   // link carries the clip, never the code
+    try {
+      await navigator.clipboard.writeText(location.href);
+      $("copyLink").textContent = "Copied!";
+      setTimeout(() => ($("copyLink").textContent = "Copy link"), 1500);
+    } catch { prompt("Copy this link:", location.href); }
+  };
+  $("gateForm").onsubmit = (e) => {
+    e.preventDefault();
+    code = $("codeInput").value.trim().toUpperCase();
+    store.set("clipit_code", code);
+    $("gateErr").textContent = "Checking...";
+    load();
+  };
+  $("logout").onclick = () => { code = ""; store.set("clipit_code", null); clips = []; showGate(); };
+  $("dayFilter").onchange = render;
+  $("refresh").onclick = load;
+  if (cfg.venueName && cfg.venueName !== "Clip It!") {
+    $("brand").innerHTML = `Clip <span>It!</span> · ${cfg.venueName.replace(/[<>&]/g, "")}`;
+  }
+  load();
+  setInterval(() => { if (code) load(); }, 60000); // pick up new clips automatically
+})();
+</script>
+</body>
+</html>
